@@ -654,7 +654,7 @@ class BeaconProbe:
                     - 2.0
                     - gcmd.get_float("CEIL", self.cal_ceil)
                 )
-                self.toolhead.set_position(pos, homing_axes=[2])
+                self.beacon.compat_toolhead_set_position_homing_z(self.toolhead, pos)
                 forced_z = True
 
             def cb(kin_pos):
@@ -666,8 +666,7 @@ class BeaconProbe:
         if kin_pos is None:
             if forced_z:
                 kin = self.toolhead.get_kinematics()
-                if hasattr(kin, "note_z_not_homed"):
-                    kin.note_z_not_homed()
+                self.compat_kin_note_z_not_homed(kin)
             return
 
         gcmd.respond_info("Beacon calibration starting")
@@ -1106,6 +1105,26 @@ class BeaconProbe:
         self._api_dump.add_web_client(web_request)
         web_request.send({"header": API_DUMP_FIELDS})
 
+    # Compat wrappers
+
+    def compat_toolhead_set_position_homing_z(self, toolhead, pos):
+        func = toolhead.set_position
+        kind = tuple
+        if hasattr(func, "__defaults__"):  # Python 3
+            kind = type(func.__defaults__[0])
+        else:  # Python 2
+            kind = type(func.func_defaults[0])
+        if kind is str:
+            return toolhead.set_position(pos, homing_axes="z")
+        else:
+            return toolhead.set_position(pos, homing_axes=[2])
+
+    def compat_kin_note_z_not_homed(self, kin):
+        if hasattr(kin, "note_z_not_homed"):
+            kin.note_z_not_homed()
+        elif hasattr(kin, "clear_homing_state"):
+            kin.clear_homing_state("z")
+
     # GCode command handlers
 
     cmd_PROBE_help = "Probe Z-height at current XY position"
@@ -1528,8 +1547,7 @@ class BeaconProbe:
                 self._calibrate(gcmd, force_pos, force_pos[2], True, True)
 
         except self.printer.command_error:
-            if hasattr(kin, "note_z_not_homed"):
-                kin.note_z_not_homed()
+            self.compat_kin_note_z_not_homed(kin)
             raise
         finally:
             self.mcu_contact_probe.deactivate_gcode.run_gcode_from_command()
@@ -1616,7 +1634,8 @@ class BeaconModel:
 
     def save(self, beacon, show_message=True):
         configfile = beacon.printer.lookup_object("configfile")
-        section = "beacon model " + self.name
+        sensor_name = "" if beacon.id.is_unnamed() else "sensor %s " % (beacon.id.name)
+        section = "beacon " + sensor_name + "model " + self.name
         configfile.set(section, "model_coef", ",\n  ".join(map(str, self.poly.coef)))
         configfile.set(section, "model_domain", ",".join(map(str, self.poly.domain)))
         configfile.set(section, "model_range", "%f,%f" % (self.min_z, self.max_z))
@@ -2427,11 +2446,10 @@ class BeaconHomingHelper:
             move = [None, None, self.z_hop]
             if "z" not in kin_status["homed_axes"]:
                 pos[2] = 0
-                toolhead.set_position(pos, homing_axes=[2])
+                self.beacon.compat_toolhead_set_position_homing_z(toolhead, pos)
                 toolhead.manual_move(move, self.z_hop_speed)
                 toolhead.wait_moves()
-                if hasattr(kin, "note_z_not_homed"):
-                    kin.note_z_not_homed()
+                self.beacon.compat_kin_note_z_not_homed(kin)
             elif pos[2] < self.z_hop:
                 toolhead.manual_move(move, self.z_hop_speed)
                 toolhead.wait_moves()
@@ -3787,9 +3805,14 @@ class BeaconTracker:
         handler = handlers.get(sensor, None)
         if not handler:
             if sensor is None:
-                raise req.error("No default Beacon registered, provide 'sensor' option to specify sensor.")
+                raise req.error(
+                    "No default Beacon registered, provide 'sensor' option to specify sensor."
+                )
             else:
-                raise req.error("Requested sensor '%s' not found, specify a valid or no sensor to use default" % (sensor,))
+                raise req.error(
+                    "Requested sensor '%s' not found, specify a valid or no sensor to use default"
+                    % (sensor,)
+                )
         handler(req)
 
 
