@@ -652,7 +652,7 @@ class BeaconProbe:
                     - 2.0
                     - gcmd.get_float("CEIL", self.cal_ceil)
                 )
-                self.beacon.compat_toolhead_set_position_homing_z(self.toolhead, pos)
+                self.compat_toolhead_set_position_homing_z(self.toolhead, pos)
                 forced_z = True
 
             def cb(kin_pos):
@@ -2334,7 +2334,9 @@ class BeaconContactEndstopWrapper:
                 if ret["triggered"] == 0:
                     now = self.beacon.reactor.monotonic()
                     if now >= deadline:
-                        raise self.printer.command_error("Timeout getting contact time")
+                        raise self.beacon.printer.command_error(
+                            "Timeout getting contact time"
+                        )
                     self.beacon.reactor.pause(now + 0.001)
                     continue
                 time = self.beacon._clock32_to_time(ret["detect_clock"])
@@ -3580,10 +3582,10 @@ class BeaconAccelHelper(object):
         return cli
 
     def read_reg(self, reg):
-        raise self.printer.command_error("Not supported")
+        raise self.beacon.printer.command_error("Not supported")
 
     def set_reg(self, reg, val, minclock=0):
-        raise self.printer.command_error("Not supported")
+        raise self.beacon.printer.command_error("Not supported")
 
     def is_measuring(self):
         return self._stream_en > 0
