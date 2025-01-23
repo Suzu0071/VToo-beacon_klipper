@@ -633,9 +633,7 @@ class BeaconProbe:
             curtime = self.printer.get_reactor().monotonic()
             kin_status = self.toolhead.get_status(curtime)
             if "xy" not in kin_status["homed_axes"]:
-                raise self.printer.command_error(
-                    "Must home X and Y " "before calibration"
-                )
+                raise self.printer.command_error("Must home X and Y before calibration")
 
             kin_pos = self.toolhead.get_position()
             if self._is_faulty_coordinate(kin_pos[0], kin_pos[1]):
@@ -758,7 +756,7 @@ class BeaconProbe:
     def _register_model(self, name, model):
         if name in self.models:
             raise self.printer.config_error(
-                "Multiple Beacon models with same" "name '%s'" % (name,)
+                "Multiple Beacon models with samename '%s'" % (name,)
             )
         self.models[name] = model
 
@@ -1328,7 +1326,7 @@ class BeaconProbe:
 
         if not self.model:
             raise self.gcode.error(
-                "You must calibrate your model first, " "use BEACON_CALIBRATE."
+                "You must calibrate your model first, use BEACON_CALIBRATE."
             )
 
         # We use the model code to save the new offset, but we can't actually
@@ -3386,9 +3384,7 @@ class BeaconAccelConfig(object):
         for a in axes_map:
             a = a.strip()
             if a not in axes:
-                raise config.error(
-                    "Invalid accel_axes_map, unknown axes " "'%s'" % (a,)
-                )
+                raise config.error("Invalid accel_axes_map, unknown axes '%s'" % (a,))
             self.axes_map.append(axes[a])
 
         self.adxl345_exists = config.has_section("adxl345")
@@ -3447,7 +3443,7 @@ class BeaconAccelHelper(object):
                 scale_val = float(scale_val_str)
             except Exception:
                 logging.error(
-                    "Beacon accelerometer scale %s could not be " "processed", name
+                    "Beacon accelerometer scale %s could not be processed", name
                 )
                 scale_val = 1  # Values will be weird, but scale will work
 
@@ -3457,14 +3453,12 @@ class BeaconAccelHelper(object):
 
         if not self.default_scale_name:
             if first_scale_name is None:
-                logging.error(
-                    "Could not determine default Beacon " "accelerometer scale"
-                )
+                logging.error("Could not determine default Beacon accelerometer scale")
             else:
                 self.default_scale_name = first_scale_name
         elif self.default_scale_name not in scales:
             logging.error(
-                "Default Beacon accelerometer scale '%s' not found, " " using '%s'",
+                "Default Beacon accelerometer scale '%s' not found,  using '%s'",
                 self.default_scale_name,
                 first_scale_name,
             )
@@ -3869,4 +3863,4 @@ def load_config_prefix(config):
         beacon._register_model(name, model)
         return model
     else:
-        raise config.error("Unknown beacon config directive '%s'" % (name,))
+        raise config.error("Unknown beacon config directive '%s'" % (secname,))
