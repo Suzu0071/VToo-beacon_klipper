@@ -1472,7 +1472,7 @@ class BeaconProbe:
         self.printer.send_event("homing:home_rails_begin", homing_state, [])
         self.mcu_contact_probe.activate_gcode.run_gcode_from_command()
         try:
-            self.compat_toolhead_set_position_homing_z(toolhead, force_pos)
+            self.compat_toolhead_set_position_homing_z(self.toolhead, force_pos)
             skip_next = True
             retries = 0
             while len(stop_samples) < sample_count:
